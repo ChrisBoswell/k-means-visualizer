@@ -1,7 +1,7 @@
-![K-Means Visualizer Gif](https://raw.githubusercontent.com/ChrisBoswell/k-means-visualizer/main/content/k_means_visualizer.gif)
 # K Means Visualizer
 Simple 2D visualization for the k-means clustering algorithm
 
+![K-Means Visualizer Gif](https://raw.githubusercontent.com/ChrisBoswell/k-means-visualizer/main/content/k_means_visualizer.gif)
 
 # What is the K-Means algorithm?
 K-Means is an unsupervised machine learning algorithm used to cluster data into groups. The algorithm works by initally randomly grouping the data points, then iteratively improving the error. Each grouping is made by assigning the data points to the closest centroid. Once all data points are assigned, the centroid then moves to the center of all the data points in the grouping. This process is repeated until no further improvements to the average distance can be made. A more in depth explaination can be found [here](https://en.wikipedia.org/wiki/K-means_clustering)

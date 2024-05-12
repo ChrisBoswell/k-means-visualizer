@@ -31,6 +31,8 @@ while True:
         num_clusters = int(input("Enter the number of clusters: "))
         if num_clusters < 0:
             print('Please Choose a non-negative value for the number of clusters')
+        elif num_clusters > num_data_points:
+            print('Please Choose less clusters than data points')
         else: 
             break
     except:

@@ -1,9 +1,9 @@
+import math
 import pygame
 import random
-import math
 import statistics
+from convex_hull import graham_scan
 
-# Initialize Pygame
 pygame.init()
 
 WIDTH, HEIGHT = 960, 360
@@ -13,7 +13,7 @@ COLOR = (255, 0, 0)  # Red
 # Create a font object for avg distance to cluster center
 font = pygame.font.Font(None, 36)
 
-# Set up the display
+# Set up the pygame display
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 while True:
@@ -49,7 +49,6 @@ while True:
     except:
         print('Please Choose a pick a new value for the speed')
 
-
 # Generate the datapoints
 data_points = []
 for _ in range(num_data_points):
@@ -62,6 +61,7 @@ kmeans = []
 border_colors = []
 data_point_clusters = []
 for _ in range(num_clusters):
+    # Uncomment x and y if you want traditional k-means
     # x = random.randint(RADIUS, WIDTH - RADIUS)
     # y = random.randint(RADIUS, HEIGHT - RADIUS)
     x = random.randint(RADIUS, 50 - RADIUS)
@@ -71,58 +71,83 @@ for _ in range(num_clusters):
     border_colors.append(border_color)
     data_point_clusters.append([])
 
+current_error = 0
+new_error = 0
+
+converged = False
+
 # Game loop
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-    screen.fill((255, 255, 255))
-
-    data_point_distances = []
+            
+    # Flag on convergence to stop iterations, occurs when the current_error == new_error      
+    if converged == False:
+        screen.fill((255, 255, 255))
+        screen.fill((255, 255, 255))
     
-    for data_point in data_points:
-        closest_kmean_index = 0
-        closest_distance = float('inf')
-        for i, kmean in enumerate(kmeans):
-            distance = math.sqrt((data_point[0] - kmean[0]) ** 2 + (data_point[1] - kmean[1]) ** 2)
-            if distance < closest_distance:
-                closest_distance = distance
-                closest_kmean_index = i
-        data_point_clusters[closest_kmean_index].append(data_point)
-        data_point_distances.append(closest_distance)
-        pygame.draw.circle(screen, border_colors[closest_kmean_index], data_point, RADIUS)
-    new_kmeans = []
-    for i, kmean in enumerate(kmeans):
-        data_point_total = len(data_point_clusters[i])
-        if data_point_total > 0:
-            x_total = y_total = 0
-            for data_point in data_point_clusters[i]:
-                x_total = x_total + data_point[0]
-                y_total = y_total + data_point[1]
-            new_kmean = (x_total / data_point_total, y_total / data_point_total)
-            new_kmeans.append(new_kmean)
-    
-            x = (new_kmean[0] - kmean[0]) / speed_of_convergence
-            y = (new_kmean[1] - kmean[1]) / speed_of_convergence
+        data_point_distances = []
+        
+        for data_point in data_points:
+            closest_cluster_index = 0
+            closest_distance = float('inf')
+            for i, kmean in enumerate(kmeans):
+                # Find the nearest centroid and assign the data point to it
+                distance = math.sqrt((data_point[0] - kmean[0]) ** 2 + (data_point[1] - kmean[1]) ** 2)
+                if distance < closest_distance:
+                    closest_distance = distance
+                    closest_cluster_index = i
+            data_point_clusters[closest_cluster_index].append(data_point)
+            data_point_distances.append(closest_distance)
+            pygame.draw.circle(screen, border_colors[closest_cluster_index], data_point, RADIUS)
             
-            # Move the cluster centroid towards the new center
-            kmean = (kmean[0] + x, kmean[1] + y)
-            
-        kmeans[i] = kmean
-            
-        pygame.draw.circle(screen, border_colors[i], kmean, RADIUS + 2)
-        pygame.draw.circle(screen, (0, 0, 0), kmean, RADIUS - 1)
+        new_clusters = []
+        for i, cluster in enumerate(kmeans):
+            data_point_total = len(data_point_clusters[i])
+            if data_point_total > 0:
+                x_total = y_total = 0
+                for data_point in data_point_clusters[i]:
+                    x_total = x_total + data_point[0]
+                    y_total = y_total + data_point[1]
+                new_cluster = (x_total / data_point_total, y_total / data_point_total)
+                new_clusters.append(new_cluster)
+        
+                x = (new_cluster[0] - cluster[0]) / speed_of_convergence
+                y = (new_cluster[1] - cluster[1]) / speed_of_convergence
+                
+                # Move the cluster centroid towards the new center
+                cluster = (cluster[0] + x, cluster[1] + y)
+                
+            kmeans[i] = cluster
 
-    data_point_clusters = [[] for _ in range(num_clusters)]
+            if data_point_total > 2:
+                # Draw the convex hull
+                convex_hull = graham_scan(data_point_clusters[i])
+                color = border_colors[i]
+                pygame.draw.lines(screen, color, True, convex_hull)
+            
+            pygame.draw.circle(screen, border_colors[i], cluster, RADIUS + 2)
+            pygame.draw.circle(screen, (0, 0, 0), cluster, RADIUS - 1)
+
 
     # Draw avg distance
-    text = font.render("Avg Dist: " + str(round(statistics.mean(data_point_distances), 2)), True, (0, 0, 0))
+    mean_error = round(statistics.mean(data_point_distances), 2)
+
+    if current_error == mean_error:
+        converged = True
+        display_text = "Avg Dist: " + str(mean_error) + " Converged!"
+    else: 
+        data_point_clusters = [[] for _ in range(num_clusters)]
+        display_text = "Avg Dist: " + str(mean_error) 
+        current_error = mean_error
+
+    text = font.render(display_text, True, (0, 0, 0))
     text_rect = text.get_rect()
     pygame.draw.rect(screen, (255, 255, 255), (10, 10, text_rect.width, text_rect.height))
     screen.blit(text, (10, 10)) 
-    
+
     pygame.display.flip()
 
     pygame.time.delay(100)
